@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TREEVAULT — Binary Tree Archiving &amp; Recovery</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>TREEVAULT</h1>
+        <span class="subtitle">Lossless Binary Tree Archiving &amp; Structural Recovery (TVF-1)</span>
+      </div>
+      <div id="status-banner" class="status-banner" role="status" aria-live="polite">
+        Ready. Load an example, generate a random tree, or add a root node.
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- Section A: Tree Builder & SVG Canvas -->
+    <section class="panel builder-panel" aria-labelledby="builder-heading">
+      <div class="panel-header">
+        <h2 id="builder-heading">A. Tree Builder</h2>
+        <span id="tree-meta" class="meta-pill">0 nodes</span>
+      </div>
+
+      <div class="controls-group">
+        <div class="control-row">
+          <button type="button" id="btn-load-example" class="btn btn-primary">Load Example</button>
+          <div class="inline-field">
+            <label for="random-count" class="sr-only">Random node count</label>
+            <input
+              type="number"
+              id="random-count"
+              min="1"
+              max="2000"
+              placeholder="Nodes (5-15)"
+              title="Optional node count (1-2000)"
+            />
+            <button type="button" id="btn-random-tree" class="btn">Generate Random</button>
+          </div>
+          <button type="button" id="btn-clear-tree" class="btn btn-danger">Clear Tree</button>
+        </div>
+
+        <div class="control-row">
+          <label for="node-label-input" class="field-label">Label:</label>
+          <input
+            type="text"
+            id="node-label-input"
+            maxlength="16"
+            placeholder="A-Z, 0-9, _ or -"
+            aria-label="Node label"
+          />
+          <button type="button" id="btn-add-root" class="btn">Add Root</button>
+          <button type="button" id="btn-add-left" class="btn">Add Left Child</button>
+          <button type="button" id="btn-add-right" class="btn">Add Right Child</button>
+          <button type="button" id="btn-delete-subtree" class="btn btn-danger">Delete Subtree</button>
+        </div>
+      </div>
+
+      <div class="selection-bar">
+        <span>Selected Node:</span>
+        <strong id="selected-node-info">None (click a node in the SVG)</strong>
+      </div>
+
+      <div class="svg-viewport" id="svg-viewport">
+        <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Binary tree visualization">
+          <g id="svg-edges"></g>
+          <g id="svg-nodes"></g>
+        </svg>
+        <div id="empty-canvas-msg" class="empty-canvas-msg">
+          Tree is empty. Click <strong>Load Example</strong>, <strong>Generate Random</strong>, or <strong>Add Root</strong>.
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Archive & Recovery + Verification -->
+    <div class="side-column">
+      <!-- Section B: Archive and Recovery -->
+      <section class="panel archive-panel" aria-labelledby="archive-heading">
+        <div class="panel-header">
+          <h2 id="archive-heading">B. Archive &amp; Recovery (TVF-1)</h2>
+          <span id="snapshot-badge" class="meta-pill">Snapshot: None</span>
+        </div>
+
+        <div class="control-row">
+          <button type="button" id="btn-export" class="btn btn-primary">Export &amp; Snapshot</button>
+          <button type="button" id="btn-copy" class="btn">Copy</button>
+          <label class="btn file-btn">
+            Import File
+            <input type="file" id="file-import" accept=".txt,.tvf,text/plain" hidden />
+          </label>
+          <button type="button" id="btn-restore" class="btn btn-primary">Restore from Archive</button>
+        </div>
+
+        <div class="control-row demo-row">
+          <button type="button" id="btn-run-demo" class="btn btn-outline">
+            Run Full Recovery Demo (Export &rarr; Clear &rarr; Restore &rarr; Verify)
+          </button>
+        </div>
+
+        <label for="archive-textarea" class="field-label block-label">TVF-1 Archive Stream:</label>
+        <textarea
+          id="archive-textarea"
+          class="archive-textarea"
+          rows="6"
+          spellcheck="false"
+          placeholder="TVF-1&#10;COUNT:0&#10;DATA:X"
+        ></textarea>
+
+        <div class="corruption-bar">
+          <span class="corruption-title">Corruption Controls:</span>
+          <button type="button" id="btn-corrupt-remove" class="btn btn-small">Remove Token</button>
+          <button type="button" id="btn-corrupt-count" class="btn btn-small">Alter Count</button>
+          <button type="button" id="btn-corrupt-token" class="btn btn-small">Inject Invalid Token</button>
+        </div>
+
+        <div id="archive-error" class="error-box" hidden></div>
+      </section>
+
+      <!-- Section C: Verification -->
+      <section class="panel verification-panel" aria-labelledby="verification-heading">
+        <div class="panel-header">
+          <h2 id="verification-heading">C. Verification</h2>
+          <span id="match-badge" class="meta-pill">Pending</span>
+        </div>
+
+        <div id="recovery-status" class="recovery-status">
+          Export a tree to capture a verification snapshot, clear the active tree, and restore from the archive.
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-label">Active / Restored Nodes</div>
+            <div class="metric-value" id="active-count">0</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">Snapshot Nodes</div>
+            <div class="metric-value" id="snapshot-count">—</div>
+          </div>
+        </div>
+
+        <div class="traversal-list">
+          <div class="traversal-item">
+            <span class="traversal-label">Active Preorder:</span>
+            <code id="active-preorder" class="traversal-code">[]</code>
+          </div>
+          <div class="traversal-item">
+            <span class="traversal-label">Active Inorder:</span>
+            <code id="active-inorder" class="traversal-code">[]</code>
+          </div>
+          <div class="traversal-item" id="snapshot-preorder-row" hidden>
+            <span class="traversal-label">Original Preorder:</span>
+            <code id="snapshot-preorder" class="traversal-code">[]</code>
+          </div>
+          <div class="traversal-item" id="snapshot-inorder-row" hidden>
+            <span class="traversal-label">Original Inorder:</span>
+            <code id="snapshot-inorder" class="traversal-code">[]</code>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Full-Width Bottom Section: Automated Test Lab -->
+    <section class="panel testlab-panel" aria-labelledby="testlab-heading">
+      <div class="panel-header">
+        <h2 id="testlab-heading">Test Lab (Backend Serialization, Validation &amp; Deserialization)</h2>
+        <div class="testlab-actions">
+          <span id="test-summary" class="meta-pill">Not run</span>
+          <button type="button" id="btn-run-tests" class="btn btn-primary">Run All Tests</button>
+        </div>
+      </div>
+      <div id="test-results-grid" class="test-results-grid">
+        <p class="muted-note">Click <strong>Run All Tests</strong> to execute the 11 backend verification tests.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
