@@ -4,42 +4,33 @@
   const LABEL_RE = /^[A-Za-z0-9_-]{1,16}$/;
 
   const state = {
-    tree: null, // { label: string, left: node|null, right: node|null } | null
-    selectedPath: null, // string like "" (root), "L", "LR", etc. or null
-    snapshot: null, // compact original verification snapshot captured on Export
+    tree: null,           // Deliverable 01 active editable tree JSON
+    selectedPath: null,   // Selected node path in Deliverable 01 ("", "L", "LR", etc.)
+    exportedArchive: "",  // Deliverable 02 exported TVF-1 text
+    snapshot: null,       // Compact original verification snapshot captured on Export
+    recoveredTree: null,  // Deliverable 03 reconstructed tree JSON (independent of state.tree)
   };
 
-  // DOM elements
-  const statusBanner = document.getElementById("status-banner");
-  const treeMeta = document.getElementById("tree-meta");
-  const selectedNodeInfo = document.getElementById("selected-node-info");
-  const nodeLabelInput = document.getElementById("node-label-input");
+  // Header & Navigation
+  const backendStatusEl = document.getElementById("backend-status");
+  const backendStatusText = document.getElementById("backend-status-text");
+  const globalNotice = document.getElementById("global-notice");
+  const navTabs = Array.from(document.querySelectorAll(".nav-tab"));
+  const deliverablePanels = Array.from(document.querySelectorAll(".deliverable-panel"));
+
+  // Deliverable 01 Elements
+  const d1NodeCount = document.getElementById("d1-node-count");
+  const d1TreeHeight = document.getElementById("d1-tree-height");
+  const d1SelectedNode = document.getElementById("d1-selected-node");
+  const d1Preorder = document.getElementById("d1-preorder");
+  const d1Inorder = document.getElementById("d1-inorder");
   const randomCountInput = document.getElementById("random-count");
+  const nodeLabelInput = document.getElementById("node-label-input");
+  const d1Svg = document.getElementById("tree-svg");
+  const d1SvgEdges = document.getElementById("svg-edges");
+  const d1SvgNodes = document.getElementById("svg-nodes");
+  const d1EmptyMsg = document.getElementById("empty-canvas-msg");
 
-  const svgEl = document.getElementById("tree-svg");
-  const svgEdges = document.getElementById("svg-edges");
-  const svgNodes = document.getElementById("svg-nodes");
-  const emptyCanvasMsg = document.getElementById("empty-canvas-msg");
-
-  const archiveTextarea = document.getElementById("archive-textarea");
-  const archiveError = document.getElementById("archive-error");
-  const snapshotBadge = document.getElementById("snapshot-badge");
-
-  const matchBadge = document.getElementById("match-badge");
-  const recoveryStatus = document.getElementById("recovery-status");
-  const activeCountEl = document.getElementById("active-count");
-  const snapshotCountEl = document.getElementById("snapshot-count");
-  const activePreorderEl = document.getElementById("active-preorder");
-  const activeInorderEl = document.getElementById("active-inorder");
-  const snapshotPreorderRow = document.getElementById("snapshot-preorder-row");
-  const snapshotInorderRow = document.getElementById("snapshot-inorder-row");
-  const snapshotPreorderEl = document.getElementById("snapshot-preorder");
-  const snapshotInorderEl = document.getElementById("snapshot-inorder");
-
-  const testSummary = document.getElementById("test-summary");
-  const testResultsGrid = document.getElementById("test-results-grid");
-
-  // Buttons
   const btnLoadExample = document.getElementById("btn-load-example");
   const btnRandomTree = document.getElementById("btn-random-tree");
   const btnClearTree = document.getElementById("btn-clear-tree");
@@ -48,29 +39,73 @@
   const btnAddRight = document.getElementById("btn-add-right");
   const btnDeleteSubtree = document.getElementById("btn-delete-subtree");
 
+  // Deliverable 02 Elements
+  const d2NodeCount = document.getElementById("d2-node-count");
+  const d2MetaCount = document.getElementById("d2-meta-count");
+  const d2SnapshotStatus = document.getElementById("d2-snapshot-status");
+  const exportedArchiveDisplay = document.getElementById("exported-archive-display");
+  const d2Error = document.getElementById("d2-error");
   const btnExport = document.getElementById("btn-export");
   const btnCopy = document.getElementById("btn-copy");
+  const btnDownloadTvf = document.getElementById("btn-download-tvf");
+  const btnClearArchive = document.getElementById("btn-clear-archive");
+
+  // Deliverable 03 Elements
+  const d3NodeCount = document.getElementById("d3-node-count");
+  const d3ValidationPill = document.getElementById("d3-validation-pill");
+  const recoveryTextarea = document.getElementById("recovery-textarea");
+  const d3ValidationBox = document.getElementById("d3-validation-box");
+  const d3Preorder = document.getElementById("d3-preorder");
+  const d3Inorder = document.getElementById("d3-inorder");
+  const d3Svg = document.getElementById("recovery-svg");
+  const d3SvgEdges = document.getElementById("recovery-svg-edges");
+  const d3SvgNodes = document.getElementById("recovery-svg-nodes");
+  const d3EmptyMsg = document.getElementById("recovery-empty-msg");
+  const btnUseExported = document.getElementById("btn-use-exported");
   const fileImport = document.getElementById("file-import");
   const btnRestore = document.getElementById("btn-restore");
-  const btnRunDemo = document.getElementById("btn-run-demo");
+  const btnClearRecoveryInput = document.getElementById("btn-clear-recovery-input");
+  const btnAdoptRecovered = document.getElementById("btn-adopt-recovered");
 
+  // Deliverable 04 Elements
+  const btnVerify = document.getElementById("btn-verify");
+  const d4StatusNote = document.getElementById("d4-status-note");
+  const vStructureStatus = document.getElementById("v-structure-status");
+  const vStructureDetail = document.getElementById("v-structure-detail");
+  const vCountStatus = document.getElementById("v-count-status");
+  const vCountDetail = document.getElementById("v-count-detail");
+  const vPreorderStatus = document.getElementById("v-preorder-status");
+  const vPreorderDetail = document.getElementById("v-preorder-detail");
+  const vInorderStatus = document.getElementById("v-inorder-status");
+  const vInorderDetail = document.getElementById("v-inorder-detail");
+  const vOrigPre = document.getElementById("v-orig-pre");
+  const vRecPre = document.getElementById("v-rec-pre");
+  const vOrigIn = document.getElementById("v-orig-in");
+  const vRecIn = document.getElementById("v-rec-in");
+
+  // Archival Utilities Elements
   const btnCorruptRemove = document.getElementById("btn-corrupt-remove");
   const btnCorruptCount = document.getElementById("btn-corrupt-count");
   const btnCorruptToken = document.getElementById("btn-corrupt-token");
+  const corruptionFeedback = document.getElementById("corruption-feedback");
   const btnRunTests = document.getElementById("btn-run-tests");
+  const testSummary = document.getElementById("test-summary");
+  const testResultsGrid = document.getElementById("test-results-grid");
 
-  function setStatus(msg) {
-    statusBanner.textContent = msg;
+  function setNotice(msg) {
+    globalNotice.textContent = msg;
   }
 
-  function showArchiveError(msg) {
+  function showBox(el, msg, type = "error") {
     if (!msg) {
-      archiveError.hidden = true;
-      archiveError.textContent = "";
+      el.hidden = true;
+      el.textContent = "";
+      el.className = "alert-box";
       return;
     }
-    archiveError.hidden = false;
-    archiveError.textContent = msg;
+    el.hidden = false;
+    el.textContent = msg;
+    el.className = `alert-box ${type === "success" ? "alert-success" : "alert-error"}`;
   }
 
   async function apiRequest(url, options = {}) {
@@ -80,10 +115,55 @@
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const detail = data.detail || `HTTP ${res.status}`;
-      throw new Error(detail);
+      throw new Error(data.detail || `HTTP ${res.status}`);
     }
     return data;
+  }
+
+  async function checkBackendConnectivity() {
+    try {
+      await apiRequest("/api/tree/traversals", {
+        method: "POST",
+        body: JSON.stringify({ tree: null }),
+      });
+      backendStatusEl.className = "conn-pill connected";
+      backendStatusText.textContent = "Backend Connected";
+    } catch {
+      backendStatusEl.className = "conn-pill disconnected";
+      backendStatusText.textContent = "Backend Disconnected";
+    }
+  }
+
+  // Tab Navigation (preserves all application state)
+  function switchTab(targetId) {
+    for (const tab of navTabs) {
+      const isMatch = tab.dataset.tab === targetId;
+      tab.classList.toggle("active", isMatch);
+      tab.setAttribute("aria-selected", isMatch ? "true" : "false");
+    }
+    for (const panel of deliverablePanels) {
+      const isMatch = panel.id === targetId;
+      panel.classList.toggle("active", isMatch);
+      panel.hidden = !isMatch;
+    }
+  }
+
+  for (const tab of navTabs) {
+    tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+  }
+
+  // Iterative tree height computation (0 for empty, 1 for single root)
+  function computeTreeHeight(root) {
+    if (!root) return 0;
+    let maxH = 0;
+    const stack = [{ node: root, depth: 1 }];
+    while (stack.length > 0) {
+      const { node, depth } = stack.pop();
+      if (depth > maxH) maxH = depth;
+      if (node.right) stack.push({ node: node.right, depth: depth + 1 });
+      if (node.left) stack.push({ node: node.left, depth: depth + 1 });
+    }
+    return maxH;
   }
 
   function getNodeAtPath(root, path) {
@@ -99,7 +179,7 @@
   function validateInputLabel() {
     const raw = nodeLabelInput.value.trim();
     if (!LABEL_RE.test(raw)) {
-      setStatus("Invalid label: use 1-16 chars of letters, digits, '_' or '-'.");
+      setNotice("Invalid label: use 1-16 characters of letters, digits, '_' or '-'.");
       nodeLabelInput.focus();
       return null;
     }
@@ -112,24 +192,31 @@
     return `[${arr.slice(0, 30).join(", ")}, ... (${arr.length} total)]`;
   }
 
-  // Iterative inorder layout to avoid overlap on arbitrary binary trees
-  function renderTreeSVG() {
-    svgEdges.innerHTML = "";
-    svgNodes.innerHTML = "";
+  function arraysEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
 
-    if (!state.tree) {
-      emptyCanvasMsg.style.display = "flex";
+  // Reusable overlap-free iterative inorder-rank SVG tree renderer
+  function renderTreeToSVG(treeData, svgEl, edgesGroup, nodesGroup, emptyEl, options = {}) {
+    const { interactive = false, selectedPath = null, onSelect = null, minHeight = 420 } = options;
+    edgesGroup.innerHTML = "";
+    nodesGroup.innerHTML = "";
+
+    if (!treeData) {
+      emptyEl.style.display = "flex";
       svgEl.setAttribute("width", "100%");
       svgEl.setAttribute("height", "100%");
-      updateSelectionUI();
       return;
     }
-    emptyCanvasMsg.style.display = "none";
+    emptyEl.style.display = "none";
 
-    // Assign inorder X index and depth Y iteratively
-    const positions = new Map(); // path -> { node, xIdx, depth, parentPath, side }
+    const positions = new Map();
     const stack = [];
-    let curr = { node: state.tree, path: "", depth: 0, parentPath: null, side: null };
+    let curr = { node: treeData, path: "", depth: 0, parentPath: null };
     let xCounter = 0;
     let maxDepth = 0;
 
@@ -137,13 +224,7 @@
       while (curr !== null) {
         stack.push(curr);
         curr = curr.node.left
-          ? {
-              node: curr.node.left,
-              path: curr.path + "L",
-              depth: curr.depth + 1,
-              parentPath: curr.path,
-              side: "L",
-            }
+          ? { node: curr.node.left, path: curr.path + "L", depth: curr.depth + 1, parentPath: curr.path }
           : null;
       }
       const item = stack.pop();
@@ -152,29 +233,22 @@
         xIdx: xCounter++,
         depth: item.depth,
         parentPath: item.parentPath,
-        side: item.side,
       });
       if (item.depth > maxDepth) maxDepth = item.depth;
 
       curr = item.node.right
-        ? {
-            node: item.node.right,
-            path: item.path + "R",
-            depth: item.depth + 1,
-            parentPath: item.path,
-            side: "R",
-          }
+        ? { node: item.node.right, path: item.path + "R", depth: item.depth + 1, parentPath: item.parentPath !== undefined ? item.path : null }
         : null;
     }
 
-    const hStep = xCounter > 40 ? 44 : 56;
+    const hStep = xCounter > 40 ? 44 : 58;
     const vStep = 72;
     const padX = 48;
     const padY = 44;
     const radius = xCounter > 80 ? 15 : 19;
 
-    const width = Math.max(600, xCounter * hStep + padX * 2);
-    const height = Math.max(420, (maxDepth + 1) * vStep + padY * 2);
+    const width = Math.max(580, xCounter * hStep + padX * 2);
+    const height = Math.max(minHeight, (maxDepth + 1) * vStep + padY * 2);
     svgEl.setAttribute("width", String(width));
     svgEl.setAttribute("height", String(height));
 
@@ -187,8 +261,7 @@
       });
     }
 
-    // Draw edges first
-    for (const [path, { x, y, info }] of coords.entries()) {
+    for (const [, { x, y, info }] of coords.entries()) {
       if (info.parentPath !== null) {
         const p = coords.get(info.parentPath);
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -197,16 +270,14 @@
         line.setAttribute("x2", String(x));
         line.setAttribute("y2", String(y));
         line.setAttribute("class", "tree-edge");
-        svgEdges.appendChild(line);
+        edgesGroup.appendChild(line);
       }
     }
 
-    // Draw nodes
     for (const [path, { x, y, info }] of coords.entries()) {
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      const isSelected = state.selectedPath === path;
+      const isSelected = interactive && selectedPath === path;
       g.setAttribute("class", isSelected ? "tree-node-group selected" : "tree-node-group");
-      g.dataset.path = path;
 
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", String(x));
@@ -228,14 +299,24 @@
       g.appendChild(text);
       g.appendChild(title);
 
-      g.addEventListener("click", () => {
-        state.selectedPath = path;
-        renderTreeSVG();
-      });
+      if (interactive && onSelect) {
+        g.addEventListener("click", () => onSelect(path));
+      }
 
-      svgNodes.appendChild(g);
+      nodesGroup.appendChild(g);
     }
+  }
 
+  function renderConstructionSVG() {
+    renderTreeToSVG(state.tree, d1Svg, d1SvgEdges, d1SvgNodes, d1EmptyMsg, {
+      interactive: true,
+      selectedPath: state.selectedPath,
+      minHeight: 420,
+      onSelect: (path) => {
+        state.selectedPath = path;
+        renderConstructionSVG();
+      },
+    });
     updateSelectionUI();
   }
 
@@ -243,92 +324,43 @@
     const selectedNode = getNodeAtPath(state.tree, state.selectedPath);
     if (!selectedNode) {
       state.selectedPath = null;
-      selectedNodeInfo.textContent = "None (click a node in the SVG)";
+      d1SelectedNode.textContent = "None";
     } else {
       const pathLabel = state.selectedPath === "" ? "ROOT" : state.selectedPath;
-      selectedNodeInfo.textContent = `${selectedNode.label} [${pathLabel}]`;
+      d1SelectedNode.textContent = `${selectedNode.label} (${pathLabel})`;
     }
-
+    d1TreeHeight.textContent = String(computeTreeHeight(state.tree));
     btnAddRoot.disabled = state.tree !== null;
     btnAddLeft.disabled = !selectedNode || selectedNode.left !== null;
     btnAddRight.disabled = !selectedNode || selectedNode.right !== null;
     btnDeleteSubtree.disabled = !selectedNode;
   }
 
-  async function refreshTraversals() {
+  async function refreshConstructionTraversals() {
     try {
       const data = await apiRequest("/api/tree/traversals", {
         method: "POST",
         body: JSON.stringify({ tree: state.tree }),
       });
-      treeMeta.textContent = `${data.node_count} node${data.node_count === 1 ? "" : "s"}`;
-      activeCountEl.textContent = String(data.node_count);
-      activePreorderEl.textContent = formatListPreview(data.preorder);
-      activeInorderEl.textContent = formatListPreview(data.inorder);
+      d1NodeCount.textContent = String(data.node_count);
+      d1Preorder.textContent = formatListPreview(data.preorder);
+      d1Inorder.textContent = formatListPreview(data.inorder);
     } catch (err) {
-      setStatus(`Traversal error: ${err.message}`);
+      setNotice(`Traversal calculation failed: ${err.message}`);
     }
   }
 
-  function updateSnapshotUI() {
-    if (!state.snapshot) {
-      snapshotBadge.textContent = "Snapshot: None";
-      snapshotCountEl.textContent = "—";
-      snapshotPreorderRow.hidden = true;
-      snapshotInorderRow.hidden = true;
-      return;
-    }
-    snapshotBadge.textContent = `Snapshot: ${state.snapshot.node_count} nodes`;
-    snapshotCountEl.textContent = String(state.snapshot.node_count);
-    snapshotPreorderRow.hidden = false;
-    snapshotInorderRow.hidden = false;
-    snapshotPreorderEl.textContent = formatListPreview(state.snapshot.preorder);
-    snapshotInorderEl.textContent = formatListPreview(state.snapshot.inorder);
-  }
-
-  function resetVerificationBadge() {
-    matchBadge.textContent = "Pending";
-    matchBadge.className = "meta-pill";
-  }
-
-  async function verifyAgainstSnapshotIfPresent() {
-    if (!state.snapshot) {
-      resetVerificationBadge();
-      recoveryStatus.textContent = "Restored tree from archive. (No original snapshot captured to verify against.)";
-      return null;
-    }
-    const report = await apiRequest("/api/tree/verify", {
-      method: "POST",
-      body: JSON.stringify({
-        original_snapshot: state.snapshot,
-        restored_tree: state.tree,
-      }),
-    });
-    if (report.structural_match) {
-      matchBadge.textContent = "STRUCTURAL MATCH";
-      matchBadge.className = "meta-pill pass";
-      recoveryStatus.textContent =
-        `Verified: Restored tree (${report.restored_node_count} nodes) structurally matches the original snapshot (${report.original_node_count} nodes).`;
-    } else {
-      matchBadge.textContent = "MISMATCH";
-      matchBadge.className = "meta-pill fail";
-      recoveryStatus.textContent =
-        `Mismatch: Restored (${report.restored_node_count} nodes) does not match original snapshot (${report.original_node_count} nodes).`;
-    }
-    return report;
-  }
-
-  // Tree Builder handlers
+  // Deliverable 01 Handlers
   btnLoadExample.addEventListener("click", async () => {
     try {
       const data = await apiRequest("/api/tree/example");
       state.tree = data.tree;
       state.selectedPath = "";
-      renderTreeSVG();
-      await refreshTraversals();
-      setStatus("Loaded illustrative example tree (A, B, D, C).");
+      renderConstructionSVG();
+      await refreshConstructionTraversals();
+      setNotice("Loaded the illustrative 4-node museum family tree (A, B, D, C).");
     } catch (err) {
-      setStatus(`Error: ${err.message}`);
+      setNotice(`Failed to load example: ${err.message}`);
     }
   });
 
@@ -342,20 +374,20 @@
       });
       state.tree = data.tree;
       state.selectedPath = data.tree ? "" : null;
-      renderTreeSVG();
-      await refreshTraversals();
-      setStatus(`Generated random binary tree with ${data.node_count} nodes.`);
+      renderConstructionSVG();
+      await refreshConstructionTraversals();
+      setNotice(`Generated random ordinary binary tree (${data.node_count} nodes).`);
     } catch (err) {
-      setStatus(`Error: ${err.message}`);
+      setNotice(`Random generation error: ${err.message}`);
     }
   });
 
   btnClearTree.addEventListener("click", async () => {
     state.tree = null;
     state.selectedPath = null;
-    renderTreeSVG();
-    await refreshTraversals();
-    setStatus("Cleared active tree from canvas.");
+    renderConstructionSVG();
+    await refreshConstructionTraversals();
+    setNotice("Cleared active workspace tree. Any captured snapshot remains intact for verification.");
   });
 
   btnAddRoot.addEventListener("click", async () => {
@@ -365,9 +397,9 @@
     state.tree = { label, left: null, right: null };
     state.selectedPath = "";
     nodeLabelInput.value = "";
-    renderTreeSVG();
-    await refreshTraversals();
-    setStatus(`Added root node '${label}'.`);
+    renderConstructionSVG();
+    await refreshConstructionTraversals();
+    setNotice(`Created root node '${label}'.`);
   });
 
   async function addChild(side) {
@@ -375,7 +407,7 @@
     if (!parent) return;
     const prop = side === "L" ? "left" : "right";
     if (parent[prop] !== null) {
-      setStatus(`Selected node already has a ${prop} child.`);
+      setNotice(`Selected node already has a ${prop} child.`);
       return;
     }
     const label = validateInputLabel();
@@ -383,9 +415,9 @@
     parent[prop] = { label, left: null, right: null };
     state.selectedPath = state.selectedPath + side;
     nodeLabelInput.value = "";
-    renderTreeSVG();
-    await refreshTraversals();
-    setStatus(`Added ${prop} child '${label}'.`);
+    renderConstructionSVG();
+    await refreshConstructionTraversals();
+    setNotice(`Added ${prop} child '${label}'.`);
   }
 
   btnAddLeft.addEventListener("click", () => addChild("L"));
@@ -406,46 +438,80 @@
       }
       state.selectedPath = parentPath;
     }
-    renderTreeSVG();
-    await refreshTraversals();
-    setStatus("Deleted selected subtree.");
+    renderConstructionSVG();
+    await refreshConstructionTraversals();
+    setNotice("Deleted selected subtree.");
   });
 
-  // Archive & Recovery handlers
-  async function exportCurrentTree() {
-    showArchiveError("");
-    const data = await apiRequest("/api/archive/export", {
-      method: "POST",
-      body: JSON.stringify({ tree: state.tree }),
-    });
-    archiveTextarea.value = data.archive;
-    state.snapshot = data.snapshot;
-    updateSnapshotUI();
-    resetVerificationBadge();
-    recoveryStatus.textContent = "Snapshot captured. You can now clear the active tree and restore from the TVF-1 archive.";
-    setStatus(`Exported TVF-1 archive (${data.node_count} nodes) and captured snapshot.`);
-    return data;
-  }
-
+  // Deliverable 02: Archive & Serialization
   btnExport.addEventListener("click", async () => {
+    showBox(d2Error, "");
     try {
-      await exportCurrentTree();
+      const data = await apiRequest("/api/archive/export", {
+        method: "POST",
+        body: JSON.stringify({ tree: state.tree }),
+      });
+      state.exportedArchive = data.archive;
+      state.snapshot = data.snapshot;
+      exportedArchiveDisplay.textContent = data.archive;
+      d2NodeCount.textContent = String(data.node_count);
+      d2MetaCount.textContent = String(data.node_count);
+      d2SnapshotStatus.textContent = `SNAPSHOT: CAPTURED (${data.node_count} NODES)`;
+      setNotice(`Exported TVF-1 archival record (${data.node_count} nodes) and captured reference snapshot.`);
     } catch (err) {
-      showArchiveError(err.message);
-      setStatus(`Export failed: ${err.message}`);
+      showBox(d2Error, err.message, "error");
+      setNotice(`Export failed: ${err.message}`);
     }
   });
 
   btnCopy.addEventListener("click", async () => {
-    const text = archiveTextarea.value;
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatus("Copied TVF-1 archive to clipboard.");
-    } catch {
-      archiveTextarea.select();
-      setStatus("Selected archive text (clipboard permission unavailable).");
+    if (!state.exportedArchive) {
+      setNotice("No exported archive to copy. Click Export Archive first.");
+      return;
     }
+    try {
+      await navigator.clipboard.writeText(state.exportedArchive);
+      setNotice("Copied TVF-1 archival record to clipboard.");
+    } catch {
+      setNotice("Clipboard permission unavailable; select text directly from the record sheet.");
+    }
+  });
+
+  btnDownloadTvf.addEventListener("click", () => {
+    if (!state.exportedArchive) {
+      setNotice("No exported archive to download. Click Export Archive first.");
+      return;
+    }
+    const blob = new Blob([state.exportedArchive + "\n"], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "treevault-record.tvf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setNotice("Downloaded preservation record as treevault-record.tvf.");
+  });
+
+  btnClearArchive.addEventListener("click", () => {
+    state.exportedArchive = "";
+    exportedArchiveDisplay.textContent = 'No preservation record generated yet. Click "Export Archive" to serialize the active tree.';
+    d2NodeCount.textContent = "—";
+    d2MetaCount.textContent = "—";
+    showBox(d2Error, "");
+    setNotice("Cleared displayed preservation record.");
+  });
+
+  // Deliverable 03: Independent Archive Recovery
+  btnUseExported.addEventListener("click", () => {
+    if (!state.exportedArchive) {
+      setNotice("No record has been exported in Deliverable 02 yet.");
+      return;
+    }
+    recoveryTextarea.value = state.exportedArchive;
+    showBox(d3ValidationBox, "");
+    setNotice("Loaded exported TVF-1 record into Deliverable 03 recovery input.");
   });
 
   fileImport.addEventListener("change", (ev) => {
@@ -453,141 +519,233 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      archiveTextarea.value = String(reader.result || "");
-      showArchiveError("");
-      setStatus(`Loaded archive from '${file.name}'. Click Restore from Archive.`);
+      recoveryTextarea.value = String(reader.result || "");
+      showBox(d3ValidationBox, "");
+      setNotice(`Imported '${file.name}' into recovery input. Click Restore Tree to reconstruct.`);
     };
     reader.readAsText(file);
     fileImport.value = "";
   });
 
-  async function restoreFromArchive() {
-    showArchiveError("");
-    const archiveText = archiveTextarea.value;
-    const data = await apiRequest("/api/archive/restore", {
-      method: "POST",
-      body: JSON.stringify({ archive: archiveText }),
-    });
-    state.tree = data.tree;
-    state.selectedPath = data.tree ? "" : null;
-    renderTreeSVG();
-    await refreshTraversals();
-    await verifyAgainstSnapshotIfPresent();
-    setStatus(`Restored tree from TVF-1 archive (${data.node_count} nodes).`);
-    return data;
-  }
+  btnClearRecoveryInput.addEventListener("click", () => {
+    recoveryTextarea.value = "";
+    state.recoveredTree = null;
+    d3NodeCount.textContent = "—";
+    d3ValidationPill.textContent = "Pending";
+    d3Preorder.textContent = "[]";
+    d3Inorder.textContent = "[]";
+    btnAdoptRecovered.disabled = true;
+    showBox(d3ValidationBox, "");
+    renderTreeToSVG(null, d3Svg, d3SvgEdges, d3SvgNodes, d3EmptyMsg, { minHeight: 330 });
+    setNotice("Cleared recovery input and reconstructed preview.");
+  });
 
   btnRestore.addEventListener("click", async () => {
+    showBox(d3ValidationBox, "");
+    const archiveText = recoveryTextarea.value;
     try {
-      await restoreFromArchive();
+      const data = await apiRequest("/api/archive/restore", {
+        method: "POST",
+        body: JSON.stringify({ archive: archiveText }),
+      });
+      state.recoveredTree = data.tree;
+      d3NodeCount.textContent = String(data.node_count);
+      d3ValidationPill.textContent = "Valid TVF-1";
+      d3Preorder.textContent = formatListPreview(data.preorder);
+      d3Inorder.textContent = formatListPreview(data.inorder);
+      btnAdoptRecovered.disabled = false;
+      showBox(
+        d3ValidationBox,
+        `Valid TVF-1 stream: reconstructed ${data.node_count} node(s) from archive text alone.`,
+        "success"
+      );
+      renderTreeToSVG(state.recoveredTree, d3Svg, d3SvgEdges, d3SvgNodes, d3EmptyMsg, {
+        interactive: false,
+        minHeight: 330,
+      });
+      setNotice(`Restored ${data.node_count} node(s) from TVF-1 archive.`);
     } catch (err) {
-      showArchiveError(err.message);
-      matchBadge.textContent = "REJECTED";
-      matchBadge.className = "meta-pill fail";
-      recoveryStatus.textContent = `Recovery rejected: ${err.message}`;
-      setStatus(`Restore failed: ${err.message}`);
+      state.recoveredTree = null;
+      d3NodeCount.textContent = "—";
+      d3ValidationPill.textContent = "Rejected";
+      d3Preorder.textContent = "[]";
+      d3Inorder.textContent = "[]";
+      btnAdoptRecovered.disabled = true;
+      showBox(d3ValidationBox, `Archive Rejected: ${err.message}`, "error");
+      renderTreeToSVG(null, d3Svg, d3SvgEdges, d3SvgNodes, d3EmptyMsg, { minHeight: 330 });
+      setNotice(`Recovery failed: ${err.message}`);
     }
   });
 
-  // Full 8-step recovery demonstration
-  btnRunDemo.addEventListener("click", async () => {
+  btnAdoptRecovered.addEventListener("click", async () => {
+    state.tree = state.recoveredTree ? JSON.parse(JSON.stringify(state.recoveredTree)) : null;
+    state.selectedPath = state.tree ? "" : null;
+    renderConstructionSVG();
+    await refreshConstructionTraversals();
+    switchTab("tab-construct");
+    setNotice("Loaded reconstructed tree into Deliverable 01 construction workspace.");
+  });
+
+  // Deliverable 04: Integrity Verification
+  function setStatusTag(el, matched, labelMatch = "MATCH", labelMismatch = "MISMATCH") {
+    el.textContent = matched ? labelMatch : labelMismatch;
+    el.className = `status-tag ${matched ? "tag-match" : "tag-mismatch"}`;
+  }
+
+  btnVerify.addEventListener("click", async () => {
+    if (!state.snapshot) {
+      d4StatusNote.textContent = "No original reference snapshot found. Export a tree in Deliverable 02 first.";
+      setNotice("Verification requires an original snapshot from Deliverable 02.");
+      return;
+    }
+    if (d3ValidationPill.textContent !== "Valid TVF-1") {
+      d4StatusNote.textContent = "No valid reconstructed tree found. Restore an archive in Deliverable 03 first.";
+      setNotice("Verification requires a restored tree from Deliverable 03.");
+      return;
+    }
+
     try {
-      if (!state.tree) {
-        const ex = await apiRequest("/api/tree/example");
-        state.tree = ex.tree;
-      }
-      // 1-3: Export & capture snapshot
-      await exportCurrentTree();
-      // 4: Clear original active tree from frontend
-      state.tree = null;
-      state.selectedPath = null;
-      renderTreeSVG();
-      await refreshTraversals();
-      // 5-8: Restore using only archive text & verify against snapshot
-      await restoreFromArchive();
-      setStatus("Full recovery demo completed: Export -> Clear -> Restore -> Verify.");
+      const report = await apiRequest("/api/tree/verify", {
+        method: "POST",
+        body: JSON.stringify({
+          original_snapshot: state.snapshot,
+          restored_tree: state.recoveredTree,
+        }),
+      });
+
+      const countMatch = report.original_node_count === report.restored_node_count;
+      const preorderMatch = arraysEqual(report.original_preorder, report.restored_preorder);
+      const inorderMatch = arraysEqual(report.original_inorder, report.restored_inorder);
+
+      setStatusTag(vStructureStatus, report.structural_match);
+      vStructureDetail.textContent = report.structural_match
+        ? "Explicit-stack comparison confirmed identical labels and child positions."
+        : "Structural divergence detected between original snapshot and restored tree.";
+
+      setStatusTag(vCountStatus, countMatch);
+      vCountDetail.textContent = `Original: ${report.original_node_count} | Recovered: ${report.restored_node_count}`;
+
+      setStatusTag(vPreorderStatus, preorderMatch);
+      vPreorderDetail.textContent = preorderMatch ? "Preorder sequences are identical." : "Preorder sequences differ.";
+
+      setStatusTag(vInorderStatus, inorderMatch);
+      vInorderDetail.textContent = inorderMatch ? "Inorder sequences are identical." : "Inorder sequences differ.";
+
+      vOrigPre.textContent = formatListPreview(report.original_preorder);
+      vRecPre.textContent = formatListPreview(report.restored_preorder);
+      vOrigIn.textContent = formatListPreview(report.original_inorder);
+      vRecIn.textContent = formatListPreview(report.restored_inorder);
+
+      d4StatusNote.textContent = report.structural_match
+        ? "Verification complete: the recovered tree is structurally identical to the original snapshot."
+        : "Verification complete: structural mismatch detected.";
+      setNotice(
+        report.structural_match
+          ? "Integrity verified: STRUCTURE — MATCH."
+          : "Integrity check detected a structural mismatch."
+      );
     } catch (err) {
-      showArchiveError(err.message);
-      setStatus(`Demo failed: ${err.message}`);
+      d4StatusNote.textContent = `Verification error: ${err.message}`;
+      setNotice(`Verification failed: ${err.message}`);
     }
   });
 
-  // Corruption controls
+  // Archival Utilities: Corruption Tools & Test Suite
+  function ensureRecoveryArchiveSeed() {
+    if (!recoveryTextarea.value.trim() && state.exportedArchive) {
+      recoveryTextarea.value = state.exportedArchive;
+    }
+  }
+
   btnCorruptRemove.addEventListener("click", () => {
-    const lines = archiveTextarea.value.split("\n");
-    if (lines.length < 3 || !lines[2].startsWith("DATA:")) return;
+    ensureRecoveryArchiveSeed();
+    const lines = recoveryTextarea.value.split("\n");
+    if (lines.length < 3 || !lines[2].startsWith("DATA:")) {
+      corruptionFeedback.textContent = "Load or paste a valid TVF-1 archive in Deliverable 03 first.";
+      return;
+    }
     const tokens = lines[2].slice(5).split(",");
     if (tokens.length > 0) {
       tokens.pop();
       lines[2] = "DATA:" + tokens.join(",");
-      archiveTextarea.value = lines.join("\n");
-      setStatus("Corrupted archive: removed last token from DATA.");
+      recoveryTextarea.value = lines.join("\n");
+      corruptionFeedback.textContent = "Fault injected: removed the last token from DATA. Switch to Deliverable 03 and click Restore Tree.";
+      setNotice("Injected fault: removed last token in Deliverable 03 input.");
     }
   });
 
   btnCorruptCount.addEventListener("click", () => {
-    const lines = archiveTextarea.value.split("\n");
-    if (lines.length < 2 || !lines[1].startsWith("COUNT:")) return;
+    ensureRecoveryArchiveSeed();
+    const lines = recoveryTextarea.value.split("\n");
+    if (lines.length < 2 || !lines[1].startsWith("COUNT:")) {
+      corruptionFeedback.textContent = "Load or paste a valid TVF-1 archive in Deliverable 03 first.";
+      return;
+    }
     const curr = parseInt(lines[1].slice(6), 10);
     const altered = Number.isNaN(curr) ? 999 : curr + 5;
     lines[1] = `COUNT:${altered}`;
-    archiveTextarea.value = lines.join("\n");
-    setStatus(`Corrupted archive: altered COUNT to ${altered}.`);
+    recoveryTextarea.value = lines.join("\n");
+    corruptionFeedback.textContent = `Fault injected: altered COUNT to ${altered}. Switch to Deliverable 03 and click Restore Tree.`;
+    setNotice(`Injected fault: altered COUNT to ${altered} in Deliverable 03 input.`);
   });
 
   btnCorruptToken.addEventListener("click", () => {
-    const lines = archiveTextarea.value.split("\n");
-    if (lines.length < 3 || !lines[2].startsWith("DATA:")) return;
+    ensureRecoveryArchiveSeed();
+    const lines = recoveryTextarea.value.split("\n");
+    if (lines.length < 3 || !lines[2].startsWith("DATA:")) {
+      corruptionFeedback.textContent = "Load or paste a valid TVF-1 archive in Deliverable 03 first.";
+      return;
+    }
     const payload = lines[2].slice(5);
     const tokens = payload ? payload.split(",") : [];
     const insertAt = Math.min(1, tokens.length);
     tokens.splice(insertAt, 0, "INVALID_TOKEN");
     lines[2] = "DATA:" + tokens.join(",");
-    archiveTextarea.value = lines.join("\n");
-    setStatus("Corrupted archive: injected 'INVALID_TOKEN' into DATA.");
+    recoveryTextarea.value = lines.join("\n");
+    corruptionFeedback.textContent = "Fault injected: inserted 'INVALID_TOKEN' into DATA. Switch to Deliverable 03 and click Restore Tree.";
+    setNotice("Injected fault: inserted INVALID_TOKEN in Deliverable 03 input.");
   });
 
-  // Test Lab
   btnRunTests.addEventListener("click", async () => {
     try {
       const report = await apiRequest("/api/tests/run", { method: "POST" });
-      testSummary.textContent = `${report.passed}/${report.total} passed`;
-      testSummary.className = report.failed === 0 ? "meta-pill pass" : "meta-pill fail";
+      testSummary.textContent = `${report.passed}/${report.total} PASSED`;
+      testSummary.className = `status-tag ${report.failed === 0 ? "tag-match" : "tag-mismatch"}`;
 
       testResultsGrid.innerHTML = "";
       for (const item of report.results) {
         const card = document.createElement("div");
-        card.className = "test-card";
+        card.className = "test-item";
 
-        const header = document.createElement("div");
-        header.className = "test-card-header";
+        const head = document.createElement("div");
+        head.className = "test-item-head";
 
-        const title = document.createElement("span");
-        title.textContent = item.name;
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = item.name;
 
         const badge = document.createElement("span");
-        badge.className = item.passed ? "meta-pill pass" : "meta-pill fail";
+        badge.className = `status-tag ${item.passed ? "tag-match" : "tag-mismatch"}`;
         badge.textContent = item.passed ? "PASS" : "FAIL";
 
-        header.appendChild(title);
-        header.appendChild(badge);
+        head.appendChild(nameSpan);
+        head.appendChild(badge);
 
-        const details = document.createElement("div");
-        details.className = "test-card-details";
-        details.textContent = item.details;
+        const detail = document.createElement("div");
+        detail.className = "test-item-detail";
+        detail.textContent = item.details;
 
-        card.appendChild(header);
-        card.appendChild(details);
+        card.appendChild(head);
+        card.appendChild(detail);
         testResultsGrid.appendChild(card);
       }
-      setStatus(`Test Lab finished: ${report.passed}/${report.total} tests passed.`);
+      setNotice(`Test suite finished: ${report.passed}/${report.total} passed.`);
     } catch (err) {
-      setStatus(`Test run failed: ${err.message}`);
+      setNotice(`Test suite error: ${err.message}`);
     }
   });
 
-  // Initial render
-  renderTreeSVG();
-  refreshTraversals();
-  updateSnapshotUI();
+  // Initial Boot
+  checkBackendConnectivity();
+  renderConstructionSVG();
+  refreshConstructionTraversals();
 })();

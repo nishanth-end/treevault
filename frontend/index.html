@@ -3,181 +3,463 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TREEVAULT — Binary Tree Archiving &amp; Recovery</title>
+  <title>TREEVAULT — Museum Archival Binary Tree Workstation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@6..72,500;6..72,600&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">
-        <h1>TREEVAULT</h1>
-        <span class="subtitle">Lossless Binary Tree Archiving &amp; Structural Recovery (TVF-1)</span>
+      <div class="brand-block">
+        <div class="brand-kicker">MUSEUM ARCHIVE / BINARY RECORDS</div>
+        <div class="brand-title-row">
+          <h1>TREEVAULT</h1>
+          <span class="subtitle">Digital Preservation &amp; Tree Recovery System</span>
+        </div>
       </div>
-      <div id="status-banner" class="status-banner" role="status" aria-live="polite">
-        Ready. Load an example, generate a random tree, or add a root node.
+
+      <div class="header-status-group">
+        <div id="backend-status" class="conn-pill" role="status" aria-live="polite">
+          <span class="conn-dot" aria-hidden="true"></span>
+          <span id="backend-status-text">Checking Backend...</span>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="workspace">
-    <!-- Section A: Tree Builder & SVG Canvas -->
-    <section class="panel builder-panel" aria-labelledby="builder-heading">
-      <div class="panel-header">
-        <h2 id="builder-heading">A. Tree Builder</h2>
-        <span id="tree-meta" class="meta-pill">0 nodes</span>
+  <div class="app-shell">
+    <!-- Deliverable Navigation Tabs -->
+    <nav class="deliverable-nav" aria-label="Project Deliverables">
+      <button
+        type="button"
+        class="nav-tab active"
+        data-tab="tab-construct"
+        aria-selected="true"
+      >
+        <span class="nav-code">01 — TREE CONSTRUCTION</span>
+        <span class="nav-desc">Create, edit and visualize historical family trees.</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-tab"
+        data-tab="tab-archive"
+        aria-selected="false"
+      >
+        <span class="nav-code">02 — ARCHIVE &amp; SERIALIZATION</span>
+        <span class="nav-desc">Convert a tree into a portable preservation record.</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-tab"
+        data-tab="tab-recover"
+        aria-selected="false"
+      >
+        <span class="nav-code">03 — RECOVERY &amp; RECONSTRUCTION</span>
+        <span class="nav-desc">Rebuild a tree from its archival text.</span>
+      </button>
+
+      <button
+        type="button"
+        class="nav-tab"
+        data-tab="tab-verify"
+        aria-selected="false"
+      >
+        <span class="nav-code">04 — INTEGRITY &amp; VERIFICATION</span>
+        <span class="nav-desc">Compare the recovered record with its original structure.</span>
+      </button>
+    </nav>
+
+    <div id="global-notice" class="global-notice" role="status" aria-live="polite">
+      Workstation ready. Begin by constructing or loading a family tree in Deliverable 01.
+    </div>
+
+    <!-- DELIVERABLE 01: TREE CONSTRUCTION & VISUALIZATION -->
+    <section id="tab-construct" class="deliverable-panel active" aria-labelledby="d1-heading">
+      <div class="section-head">
+        <div>
+          <h2 id="d1-heading" class="serif-heading">01 / Tree Construction</h2>
+          <p class="section-desc">Construct or inspect a historical family tree before preserving its structure.</p>
+        </div>
+        <div class="compact-stats" aria-label="Active tree metrics">
+          <div class="stat-chip">
+            <span class="stat-label">NODES</span>
+            <strong id="d1-node-count">0</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">HEIGHT</span>
+            <strong id="d1-tree-height">0</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">SELECTED</span>
+            <strong id="d1-selected-node">None</strong>
+          </div>
+        </div>
       </div>
 
-      <div class="controls-group">
-        <div class="control-row">
-          <button type="button" id="btn-load-example" class="btn btn-primary">Load Example</button>
-          <div class="inline-field">
-            <label for="random-count" class="sr-only">Random node count</label>
+      <div class="toolbar-surface">
+        <div class="toolbar-row">
+          <button type="button" id="btn-load-example" class="btn btn-primary" title="Load the museum's illustrative 4-node family tree">
+            Load Example Tree
+          </button>
+          <div class="inline-group">
+            <label for="random-count" class="sr-only">Random tree node count</label>
             <input
               type="number"
               id="random-count"
               min="1"
               max="2000"
               placeholder="Nodes (5-15)"
-              title="Optional node count (1-2000)"
+              title="Optional node count between 1 and 2000"
             />
-            <button type="button" id="btn-random-tree" class="btn">Generate Random</button>
+            <button type="button" id="btn-random-tree" class="btn" title="Generate a random ordinary binary tree">
+              Generate Random Tree
+            </button>
           </div>
-          <button type="button" id="btn-clear-tree" class="btn btn-danger">Clear Tree</button>
+          <button type="button" id="btn-clear-tree" class="btn btn-danger" title="Clear the active workspace tree (preserves any captured snapshot)">
+            Clear Tree
+          </button>
         </div>
 
-        <div class="control-row">
-          <label for="node-label-input" class="field-label">Label:</label>
+        <div class="toolbar-row">
+          <label for="node-label-input" class="field-label">Node Label:</label>
           <input
             type="text"
             id="node-label-input"
             maxlength="16"
-            placeholder="A-Z, 0-9, _ or -"
+            placeholder="1-16 chars (A-Z, 0-9, _, -)"
             aria-label="Node label"
           />
-          <button type="button" id="btn-add-root" class="btn">Add Root</button>
+          <button type="button" id="btn-add-root" class="btn">Create Tree</button>
           <button type="button" id="btn-add-left" class="btn">Add Left Child</button>
           <button type="button" id="btn-add-right" class="btn">Add Right Child</button>
           <button type="button" id="btn-delete-subtree" class="btn btn-danger">Delete Subtree</button>
         </div>
       </div>
 
-      <div class="selection-bar">
-        <span>Selected Node:</span>
-        <strong id="selected-node-info">None (click a node in the SVG)</strong>
-      </div>
-
-      <div class="svg-viewport" id="svg-viewport">
-        <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Binary tree visualization">
+      <div class="svg-frame" id="d1-svg-viewport">
+        <svg id="tree-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Active family tree visualization">
           <g id="svg-edges"></g>
           <g id="svg-nodes"></g>
         </svg>
-        <div id="empty-canvas-msg" class="empty-canvas-msg">
-          Tree is empty. Click <strong>Load Example</strong>, <strong>Generate Random</strong>, or <strong>Add Root</strong>.
+        <div id="empty-canvas-msg" class="empty-state">
+          <p class="serif-heading">No Active Family Tree</p>
+          <p>Select <strong>Load Example Tree</strong>, <strong>Generate Random Tree</strong>, or enter a label and click <strong>Create Tree</strong>.</p>
+        </div>
+      </div>
+
+      <div class="traversal-strip">
+        <div class="traversal-cell">
+          <span class="traversal-key">PREORDER</span>
+          <code id="d1-preorder" class="mono-inline">[]</code>
+        </div>
+        <div class="traversal-cell">
+          <span class="traversal-key">INORDER</span>
+          <code id="d1-inorder" class="mono-inline">[]</code>
         </div>
       </div>
     </section>
 
-    <!-- Right Column: Archive & Recovery + Verification -->
-    <div class="side-column">
-      <!-- Section B: Archive and Recovery -->
-      <section class="panel archive-panel" aria-labelledby="archive-heading">
-        <div class="panel-header">
-          <h2 id="archive-heading">B. Archive &amp; Recovery (TVF-1)</h2>
-          <span id="snapshot-badge" class="meta-pill">Snapshot: None</span>
+    <!-- DELIVERABLE 02: TREE SERIALIZATION & ARCHIVAL -->
+    <section id="tab-archive" class="deliverable-panel" aria-labelledby="d2-heading" hidden>
+      <div class="section-head">
+        <div>
+          <h2 id="d2-heading" class="serif-heading">02 / Archival Record</h2>
+          <p class="section-desc">Encode the current tree into a portable archive that preserves every node and empty-child position.</p>
         </div>
-
-        <div class="control-row">
-          <button type="button" id="btn-export" class="btn btn-primary">Export &amp; Snapshot</button>
-          <button type="button" id="btn-copy" class="btn">Copy</button>
-          <label class="btn file-btn">
-            Import File
-            <input type="file" id="file-import" accept=".txt,.tvf,text/plain" hidden />
-          </label>
-          <button type="button" id="btn-restore" class="btn btn-primary">Restore from Archive</button>
+        <div class="compact-stats">
+          <div class="stat-chip">
+            <span class="stat-label">ARCHIVE FORMAT</span>
+            <strong>TVF-1</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">NODE COUNT</span>
+            <strong id="d2-node-count">—</strong>
+          </div>
         </div>
+      </div>
 
-        <div class="control-row demo-row">
-          <button type="button" id="btn-run-demo" class="btn btn-outline">
-            Run Full Recovery Demo (Export &rarr; Clear &rarr; Restore &rarr; Verify)
+      <div class="toolbar-surface">
+        <div class="toolbar-row">
+          <button type="button" id="btn-export" class="btn btn-primary" title="Serialize the active tree to TVF-1 and capture an original snapshot">
+            Export Archive
+          </button>
+          <button type="button" id="btn-copy" class="btn" title="Copy the TVF-1 preservation record to clipboard">
+            Copy Record
+          </button>
+          <button type="button" id="btn-download-tvf" class="btn" title="Download the TVF-1 archive as a .tvf text file">
+            Download .tvf
+          </button>
+          <button type="button" id="btn-clear-archive" class="btn btn-danger" title="Clear the displayed preservation record">
+            Clear Record
           </button>
         </div>
+      </div>
 
-        <label for="archive-textarea" class="field-label block-label">TVF-1 Archive Stream:</label>
-        <textarea
-          id="archive-textarea"
-          class="archive-textarea"
-          rows="6"
-          spellcheck="false"
-          placeholder="TVF-1&#10;COUNT:0&#10;DATA:X"
-        ></textarea>
-
-        <div class="corruption-bar">
-          <span class="corruption-title">Corruption Controls:</span>
-          <button type="button" id="btn-corrupt-remove" class="btn btn-small">Remove Token</button>
-          <button type="button" id="btn-corrupt-count" class="btn btn-small">Alter Count</button>
-          <button type="button" id="btn-corrupt-token" class="btn btn-small">Inject Invalid Token</button>
+      <div class="record-sheet">
+        <div class="record-sheet-meta">
+          <span>ARCHIVE FORMAT: <strong>TVF-1</strong></span>
+          <span>DECLARED NODE COUNT: <strong id="d2-meta-count">—</strong></span>
+          <span id="d2-snapshot-status">SNAPSHOT: NOT CAPTURED</span>
         </div>
+        <pre id="exported-archive-display" class="record-pre">No preservation record generated yet. Click "Export Archive" to serialize the active tree.</pre>
+      </div>
 
-        <div id="archive-error" class="error-box" hidden></div>
-      </section>
+      <div id="d2-error" class="alert-box alert-error" hidden></div>
 
-      <!-- Section C: Verification -->
-      <section class="panel verification-panel" aria-labelledby="verification-heading">
-        <div class="panel-header">
-          <h2 id="verification-heading">C. Verification</h2>
-          <span id="match-badge" class="meta-pill">Pending</span>
+      <details class="archival-explainer">
+        <summary>Archival Format Reference — How TVF-1 Preserves Exact Tree Shape</summary>
+        <div class="explainer-body">
+          <ul>
+            <li><strong>Header (<code>TVF-1</code>)</strong>: Identifies the TreeVault archival specification version.</li>
+            <li><strong>Declared Count (<code>COUNT:&lt;n&gt;</code>)</strong>: Records the exact number of non-null nodes (0 to 2,000) for integrity checking.</li>
+            <li><strong>Serialized Stream (<code>DATA:...</code>)</strong>: Iterative preorder sequence of comma-separated tokens.</li>
+            <li><strong><code>N:&lt;label&gt;</code></strong>: Represents an actual node (1–16 chars: letters, digits, <code>_</code>, <code>-</code>).</li>
+            <li><strong><code>X</code></strong>: Represents an explicit missing (null) child position. Retaining null markers eliminates structural ambiguity—even when labels repeat or a node has only a left or right child.</li>
+          </ul>
         </div>
+      </details>
+    </section>
 
-        <div id="recovery-status" class="recovery-status">
-          Export a tree to capture a verification snapshot, clear the active tree, and restore from the archive.
+    <!-- DELIVERABLE 03: TREE RECOVERY & RECONSTRUCTION -->
+    <section id="tab-recover" class="deliverable-panel" aria-labelledby="d3-heading" hidden>
+      <div class="section-head">
+        <div>
+          <h2 id="d3-heading" class="serif-heading">03 / Archive Recovery</h2>
+          <p class="section-desc">Restore an archived binary tree using its serialized record alone.</p>
         </div>
-
-        <div class="metrics-grid">
-          <div class="metric-box">
-            <div class="metric-label">Active / Restored Nodes</div>
-            <div class="metric-value" id="active-count">0</div>
+        <div class="compact-stats">
+          <div class="stat-chip">
+            <span class="stat-label">RECOVERED NODES</span>
+            <strong id="d3-node-count">—</strong>
           </div>
-          <div class="metric-box">
-            <div class="metric-label">Snapshot Nodes</div>
-            <div class="metric-value" id="snapshot-count">—</div>
+          <div class="stat-chip">
+            <span class="stat-label">VALIDATION</span>
+            <strong id="d3-validation-pill">Pending</strong>
           </div>
-        </div>
-
-        <div class="traversal-list">
-          <div class="traversal-item">
-            <span class="traversal-label">Active Preorder:</span>
-            <code id="active-preorder" class="traversal-code">[]</code>
-          </div>
-          <div class="traversal-item">
-            <span class="traversal-label">Active Inorder:</span>
-            <code id="active-inorder" class="traversal-code">[]</code>
-          </div>
-          <div class="traversal-item" id="snapshot-preorder-row" hidden>
-            <span class="traversal-label">Original Preorder:</span>
-            <code id="snapshot-preorder" class="traversal-code">[]</code>
-          </div>
-          <div class="traversal-item" id="snapshot-inorder-row" hidden>
-            <span class="traversal-label">Original Inorder:</span>
-            <code id="snapshot-inorder" class="traversal-code">[]</code>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Full-Width Bottom Section: Automated Test Lab -->
-    <section class="panel testlab-panel" aria-labelledby="testlab-heading">
-      <div class="panel-header">
-        <h2 id="testlab-heading">Test Lab (Backend Serialization, Validation &amp; Deserialization)</h2>
-        <div class="testlab-actions">
-          <span id="test-summary" class="meta-pill">Not run</span>
-          <button type="button" id="btn-run-tests" class="btn btn-primary">Run All Tests</button>
         </div>
       </div>
-      <div id="test-results-grid" class="test-results-grid">
-        <p class="muted-note">Click <strong>Run All Tests</strong> to execute the 11 backend verification tests.</p>
+
+      <div class="recovery-grid">
+        <div class="recovery-input-pane">
+          <div class="pane-label-row">
+            <label for="recovery-textarea" class="field-label">1. Archival Text Input (TVF-1)</label>
+            <div class="inline-group">
+              <button type="button" id="btn-use-exported" class="btn btn-small" title="Paste the record exported in Deliverable 02">
+                Load Exported Record
+              </button>
+              <label class="btn btn-small file-btn" title="Import a .tvf or .txt archive file">
+                Import File
+                <input type="file" id="file-import" accept=".txt,.tvf,text/plain" hidden />
+              </label>
+            </div>
+          </div>
+
+          <textarea
+            id="recovery-textarea"
+            class="archive-textarea"
+            rows="7"
+            spellcheck="false"
+            placeholder="Paste TVF-1 archive here:&#10;TVF-1&#10;COUNT:4&#10;DATA:N:A,N:B,X,N:D,X,X,N:C,X,X"
+          ></textarea>
+
+          <div class="toolbar-row recovery-actions">
+            <button type="button" id="btn-restore" class="btn btn-primary">Restore Tree</button>
+            <button type="button" id="btn-clear-recovery-input" class="btn">Clear Input</button>
+            <button type="button" id="btn-adopt-recovered" class="btn" disabled title="Copy the reconstructed tree into Deliverable 01 workspace">
+              Load into Construction
+            </button>
+          </div>
+
+          <div id="d3-validation-box" class="alert-box" hidden></div>
+
+          <div class="traversal-strip compact-strip">
+            <div class="traversal-cell">
+              <span class="traversal-key">RECOVERED PREORDER</span>
+              <code id="d3-preorder" class="mono-inline">[]</code>
+            </div>
+            <div class="traversal-cell">
+              <span class="traversal-key">RECOVERED INORDER</span>
+              <code id="d3-inorder" class="mono-inline">[]</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="recovery-output-pane">
+          <div class="pane-label-row">
+            <span class="field-label">2. Reconstructed Tree Visualization</span>
+            <span class="muted-hint">Rebuilt strictly from archive text</span>
+          </div>
+          <div class="svg-frame svg-frame-recovery">
+            <svg id="recovery-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reconstructed binary tree visualization">
+              <g id="recovery-svg-edges"></g>
+              <g id="recovery-svg-nodes"></g>
+            </svg>
+            <div id="recovery-empty-msg" class="empty-state">
+              <p class="serif-heading">No Reconstructed Record</p>
+              <p>Paste a <code>TVF-1</code> archive and click <strong>Restore Tree</strong>.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
-  </main>
+
+    <!-- DELIVERABLE 04: STRUCTURAL VERIFICATION & INTEGRITY -->
+    <section id="tab-verify" class="deliverable-panel" aria-labelledby="d4-heading" hidden>
+      <div class="section-head">
+        <div>
+          <h2 id="d4-heading" class="serif-heading">04 / Integrity Verification</h2>
+          <p class="section-desc">Confirm whether the restored tree matches the original archival structure.</p>
+        </div>
+        <div class="toolbar-row">
+          <button type="button" id="btn-verify" class="btn btn-primary">Verify Structure</button>
+        </div>
+      </div>
+
+      <div id="d4-status-note" class="notice-strip">
+        Export a tree in Deliverable 02 (to capture the original reference snapshot) and restore an archive in Deliverable 03, then click <strong>Verify Structure</strong>.
+      </div>
+
+      <div class="verify-matrix">
+        <div class="verify-row">
+          <span class="verify-metric">STRUCTURE</span>
+          <span id="v-structure-status" class="status-tag tag-neutral">PENDING</span>
+          <span id="v-structure-detail" class="verify-detail">Explicit-stack node-by-node structural comparison</span>
+        </div>
+
+        <div class="verify-row">
+          <span class="verify-metric">NODE COUNT</span>
+          <span id="v-count-status" class="status-tag tag-neutral">PENDING</span>
+          <span id="v-count-detail" class="verify-detail">Original: — | Recovered: —</span>
+        </div>
+
+        <div class="verify-row">
+          <span class="verify-metric">PREORDER</span>
+          <span id="v-preorder-status" class="status-tag tag-neutral">PENDING</span>
+          <span id="v-preorder-detail" class="verify-detail">Original vs Recovered sequence</span>
+        </div>
+
+        <div class="verify-row">
+          <span class="verify-metric">INORDER</span>
+          <span id="v-inorder-status" class="status-tag tag-neutral">PENDING</span>
+          <span id="v-inorder-detail" class="verify-detail">Original vs Recovered sequence</span>
+        </div>
+      </div>
+
+      <div class="verify-sequences">
+        <div class="seq-box">
+          <span class="traversal-key">ORIGINAL PREORDER</span>
+          <code id="v-orig-pre" class="mono-inline">—</code>
+          <span class="traversal-key">RECOVERED PREORDER</span>
+          <code id="v-rec-pre" class="mono-inline">—</code>
+        </div>
+        <div class="seq-box">
+          <span class="traversal-key">ORIGINAL INORDER</span>
+          <code id="v-orig-in" class="mono-inline">—</code>
+          <span class="traversal-key">RECOVERED INORDER</span>
+          <code id="v-rec-in" class="mono-inline">—</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUPPLEMENTARY SECTION: ARCHIVAL UTILITIES -->
+    <section class="utilities-section" aria-labelledby="utilities-heading">
+      <div class="utilities-header">
+        <div>
+          <h2 id="utilities-heading" class="utilities-title">ARCHIVAL UTILITIES</h2>
+          <p class="utilities-sub">Supplementary diagnostic tools: malformed archive testing, automated verification suite, and traversal inspection.</p>
+        </div>
+      </div>
+
+      <div class="utilities-grid">
+        <!-- Malformed Archive Testing -->
+        <div class="utility-card">
+          <h3>Malformed Archive Testing</h3>
+          <p class="utility-desc">
+            Inject controlled faults into the Deliverable 03 recovery input to verify strict backend rejection (HTTP 422).
+          </p>
+          <div class="toolbar-row">
+            <button type="button" id="btn-corrupt-remove" class="btn btn-small">Remove Token</button>
+            <button type="button" id="btn-corrupt-count" class="btn btn-small">Alter Count</button>
+            <button type="button" id="btn-corrupt-token" class="btn btn-small">Inject Invalid Token</button>
+          </div>
+          <p id="corruption-feedback" class="muted-hint">
+            Tip: Export or load an archive first, apply a fault, then switch to Deliverable 03 and click <strong>Restore Tree</strong>.
+          </p>
+        </div>
+
+        <!-- Automated Test Suite -->
+        <div class="utility-card utility-card-wide">
+          <div class="utility-card-head">
+            <div>
+              <h3>Automated Verification Suite</h3>
+              <p class="utility-desc">Executes all 11 backend serialization, validation, deserialization, and 2,000-node tests.</p>
+            </div>
+            <div class="inline-group">
+              <span id="test-summary" class="status-tag tag-neutral">Not Run</span>
+              <button type="button" id="btn-run-tests" class="btn btn-primary btn-small">Run Test Suite</button>
+            </div>
+          </div>
+          <div id="test-results-grid" class="test-results-grid">
+            <p class="muted-hint">Click <strong>Run Test Suite</strong> to execute <code>POST /api/tests/run</code>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- INSTITUTIONAL FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-event">
+        <span class="footer-kicker">EVENT &amp; ACADEMIC CONTEXT</span>
+        <p class="footer-event-title serif-heading">Flash Hack Ver3.0</p>
+        <p class="footer-event-sub">Data Structures</p>
+      </div>
+
+      <div class="footer-columns">
+        <div class="footer-group">
+          <h3 class="footer-heading">Project Team</h3>
+          <ul class="credit-list team-grid">
+            <li><strong>Nishanth G M</strong><span>1DS25CS161</span></li>
+            <li><strong>Mohith</strong><span>1DS25CS147</span></li>
+            <li><strong>N P Sudharshan</strong><span>1DS25CS150</span></li>
+            <li><strong>Nihal Rao</strong><span>1DS25CS160</span></li>
+          </ul>
+        </div>
+
+        <div class="footer-group">
+          <h3 class="footer-heading">Coordinators</h3>
+          <ul class="credit-list">
+            <li>Prof Aurna S</li>
+            <li>Prof Soumya Patil</li>
+            <li>Dr. Kavitha K S</li>
+            <li>Prof. Shubhankar Roy</li>
+          </ul>
+        </div>
+
+        <div class="footer-group">
+          <h3 class="footer-heading">Institutional Leadership</h3>
+          <div class="leadership-block">
+            <div class="leader-item">
+              <span class="leader-role">Vice Principle and HOD CSE Dept</span>
+              <strong>Dr. Ramesh Babu DR</strong>
+            </div>
+            <div class="leader-item">
+              <span class="leader-role">Principle</span>
+              <strong>Dr. B G Prasad</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>
